@@ -88,11 +88,21 @@ Stancer.delete_card(card_token)
 - ✅ Client Stancer basique avec endpoints clés
 - ✅ Configuration via config Elixir
 
-### Phase 2 (TODO)
-- Récupérer OpenAPI.json à la compilation
-- Générer automatiquement les fonctions API via métaprogrammation
-- Documenter automatiquement les endpoints
-- Typage fort basé sur OpenAPI
+### Phase 2 ✅
+- ✅ Chargement du OpenAPI.json (runtime)
+- ✅ Génération automatique des fonctions API via métaprogrammation
+- ✅ Documentation automatique des endpoints (extraite d'OpenAPI)
+- ✅ Spécifications de type (@spec) générées automatiquement
+- ✅ Module `Stancer.DynamicAPI` pour appels dynamiques
+- ✅ Exploration et listing de tous les endpoints disponibles
+- ✅ Tests complets
+
+### Phase 3 (TODO)
+- Génération au temps de compilation (au lieu de runtime)
+- Validation automatique des paramètres selon les schémas OpenAPI
+- Support des paramètres de chemin (path parameters)
+- Webhooks automatiques
+- Typage avancé (Union types pour les énums)
 
 ---
 
