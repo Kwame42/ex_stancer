@@ -1,29 +1,42 @@
 defmodule Stancer.API do
   @moduledoc """
-  Stancer API client - all functions are generated dynamically from OpenAPI spec at compile time.
+  Stancer API client - functions are generated dynamically from OpenAPI spec at compile time.
 
   If Stancer's API changes, the functions are automatically regenerated on recompilation.
 
   ## Usage
 
+  All functions follow the pattern: `resource_action`
+
   ```elixir
-  # Customers
+  # List customers
   Stancer.API.customers_list()
+
+  # Create a customer
   Stancer.API.customers_create(%{"name" => "John"})
+
+  # Get a specific customer
   Stancer.API.customers_get("cust_123")
+
+  # Update a customer
   Stancer.API.customers_update("cust_123", %{"name" => "Jane"})
+
+  # Delete a customer
   Stancer.API.customers_delete("cust_123")
 
-  # Payments
-  Stancer.API.payments_list()
-  Stancer.API.payments_create(%{"amount" => 5000, ...})
-  Stancer.API.payments_get("paym_123")
-
-  # ... and many more operations
+  # Similar for all other resources:
+  # - payments_*
+  # - payment_intents_*
+  # - refunds_*
+  # - mandates_*
+  # - webhooks_*
+  # - etc.
   ```
 
   All functions return `{:ok, response}` on success or `{:error, reason}` on failure.
   """
+
+  require Logger
 
   # Load OpenAPI spec at compile time
   @openapi_spec (
@@ -33,7 +46,7 @@ defmodule Stancer.API do
     end
   )
 
-  # Parse and organize resources
+  # Parse and organize operations from spec
   @operations (
     if @openapi_spec do
       extract_resource_fn = fn path ->
@@ -78,14 +91,13 @@ defmodule Stancer.API do
     end
   )
 
-  # Generate all API functions at compile time
-  require Logger
-  Logger.info("Stancer.API: Generating #{Enum.count(@operations)} functions from OpenAPI spec")
-
-  for operation <- @operations do
+  # Classify operation and extract unique functions
+  @unique_functions (
+    @operations
+    |> Enum.map(fn operation ->
       resource = operation["resource"]
-      path = operation["path"]
       method = operation["method"]
+      path = operation["path"]
 
       # Classify the operation (list, create, get, update, delete)
       has_id =
@@ -114,48 +126,54 @@ defmodule Stancer.API do
           _ -> :other
         end
 
-      # Generate the appropriate function
-      case action do
-        :list ->
-          function_name = :"#{resource}_list"
+      {action, path, resource}
+    end)
+    |> Enum.filter(fn {action, _, _} -> action != :other end)
+    |> Enum.uniq_by(fn {action, _, resource} -> {resource, action} end)
+  )
 
-          def unquote(function_name)() do
-            Stancer.request(:get, unquote(path))
-          end
+  # Generate all API functions at compile time
+  Logger.info("Stancer.API: Generating #{Enum.count(@unique_functions)} functions from #{Enum.count(@operations)} OpenAPI endpoints")
 
-        :create ->
-          function_name = :"#{resource}_create"
+  for {action, path, resource} <- @unique_functions do
+    case action do
+      :list ->
+        function_name = :"#{resource}_list"
 
-          def unquote(function_name)(data) when is_map(data) do
-            Stancer.request(:post, unquote(path), data)
-          end
+        def unquote(function_name)() do
+          Stancer.request(:get, unquote(path))
+        end
 
-        :get ->
-          function_name = :"#{resource}_get"
+      :create ->
+        function_name = :"#{resource}_create"
 
-          def unquote(function_name)(id) when is_binary(id) do
-            path = String.replace(unquote(path), ~r/\{[^}]+\}/, id)
-            Stancer.request(:get, path)
-          end
+        def unquote(function_name)(data) when is_map(data) do
+          Stancer.request(:post, unquote(path), data)
+        end
 
-        :update ->
-          function_name = :"#{resource}_update"
+      :get ->
+        function_name = :"#{resource}_get"
 
-          def unquote(function_name)(id, data) when is_binary(id) and is_map(data) do
-            path = String.replace(unquote(path), ~r/\{[^}]+\}/, id)
-            Stancer.request(:put, path, data)
-          end
+        def unquote(function_name)(id) when is_binary(id) do
+          path = String.replace(unquote(path), ~r/\{[^}]+\}/, id)
+          Stancer.request(:get, path)
+        end
 
-        :delete ->
-          function_name = :"#{resource}_delete"
+      :update ->
+        function_name = :"#{resource}_update"
 
-          def unquote(function_name)(id) when is_binary(id) do
-            path = String.replace(unquote(path), ~r/\{[^}]+\}/, id)
-            Stancer.request(:delete, path)
-          end
+        def unquote(function_name)(id, data) when is_binary(id) and is_map(data) do
+          path = String.replace(unquote(path), ~r/\{[^}]+\}/, id)
+          Stancer.request(:put, path, data)
+        end
 
-        :other ->
-          :ok
-      end
+      :delete ->
+        function_name = :"#{resource}_delete"
+
+        def unquote(function_name)(id) when is_binary(id) do
+          path = String.replace(unquote(path), ~r/\{[^}]+\}/, id)
+          Stancer.request(:delete, path)
+        end
+    end
   end
 end
