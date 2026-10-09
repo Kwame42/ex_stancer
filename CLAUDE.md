@@ -82,27 +82,39 @@ Stancer.delete_card(card_token)
 
 ---
 
-## Roadmap (Métaprogrammation)
+## Roadmap (Métaprogrammation & API Design)
 
 ### Phase 1 ✅
 - ✅ Client Stancer basique avec endpoints clés
 - ✅ Configuration via config Elixir
 
-### Phase 2 ✅
-- ✅ Chargement du OpenAPI.json (runtime)
-- ✅ Génération automatique des fonctions API via métaprogrammation
-- ✅ Documentation automatique des endpoints (extraite d'OpenAPI)
-- ✅ Spécifications de type (@spec) générées automatiquement
-- ✅ Module `Stancer.DynamicAPI` pour appels dynamiques
-- ✅ Exploration et listing de tous les endpoints disponibles
-- ✅ Tests complets
+### Phase 2 ✅ (Refactored)
+- ✅ Clean, hierarchical API structure (`Stancer.API.ResourceName`)
+- ✅ Standard CRUD functions per resource (list, create, get, update, delete)
+- ✅ Full documentation with examples
+- ✅ Type-safe @spec declarations
+- ✅ Consistent error handling
+- ✅ OpenAPI loader and generator modules (foundation for future generation)
+- ✅ Full test coverage
+
+**Structure:**
+```
+Stancer.API.Customers.list()       # GET /customers
+Stancer.API.Customers.create(data) # POST /customers
+Stancer.API.Customers.get(id)      # GET /customers/{id}
+Stancer.API.Customers.update(id, data) # PUT /customers/{id}
+Stancer.API.Customers.delete(id)   # DELETE /customers/{id}
+
+Stancer.API.Payments.* (same pattern)
+Stancer.API.Cards.* (same pattern)
+```
 
 ### Phase 3 (TODO)
-- Génération au temps de compilation (au lieu de runtime)
-- Validation automatique des paramètres selon les schémas OpenAPI
-- Support des paramètres de chemin (path parameters)
-- Webhooks automatiques
-- Typage avancé (Union types pour les énums)
+- Auto-generate remaining resource modules from OpenAPI spec
+- Support for additional resource types (Mandates, Subscriptions, Disputes, Webhooks, etc.)
+- Validation layer based on OpenAPI schemas
+- Specialized functions for complex operations (capture, refund, etc.)
+- Webhook handler generation
 
 ---
 
