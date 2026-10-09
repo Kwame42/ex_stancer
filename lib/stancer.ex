@@ -50,7 +50,6 @@ defmodule Stancer do
   require Logger
 
   @api_url Application.compile_env(:stancer, :api_url, "https://api.stancer.com")
-  @api_version Application.compile_env(:stancer, :api_version, "v1")
 
   defp api_key, do: Application.get_env(:stancer, :api_key, "")
 
@@ -73,7 +72,7 @@ defmodule Stancer do
       {"Content-Type", "application/json"}
     ]
 
-    url = "#{@api_url}/#{@api_version}#{path}"
+    url = "#{@api_url}#{path}"
     Logger.debug("Stancer request: #{method} #{url}")
 
     req_opts = [
