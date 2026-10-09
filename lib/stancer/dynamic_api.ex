@@ -20,8 +20,6 @@ defmodule Stancer.DynamicAPI do
   All functions return `{:ok, response_data}` on success or `{:error, reason}` on failure.
   """
 
-  require Logger
-
   @doc """
   Load the OpenAPI specification and return all available endpoints.
 
