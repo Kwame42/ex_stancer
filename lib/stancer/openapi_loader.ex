@@ -1,27 +1,37 @@
 defmodule Stancer.OpenAPILoader do
   @moduledoc """
-  Loads and caches the Stancer OpenAPI specification.
+  Loads the Stancer OpenAPI specification with intelligent fallback.
+
+  1. Tries to download from Stancer
+  2. Falls back to cached version in priv/openapi.json
+  3. Logs version info when using cached version
   """
+
+  require Logger
 
   @openapi_url "https://docs.stancer.com/api/openapi.json"
 
   def load_spec do
-    with :ok <- Application.ensure_started(:req),
-         {:ok, response} <- Req.get(@openapi_url) do
-      spec =
-        case response.body do
-          body when is_map(body) -> body
-          body when is_binary(body) -> Jason.decode!(body)
-          _ -> raise "Invalid response body type"
+    # Try to download first
+    case download_spec() do
+      {:ok, spec} ->
+        Logger.info("Loaded Stancer OpenAPI spec from remote (#{get_version_info(spec)})")
+        {:ok, spec}
+
+      :error ->
+        # Fallback to cached version
+        case load_cached_spec() do
+          {:ok, spec} ->
+            version = get_version_info(spec)
+            Logger.warning(
+              "Failed to download OpenAPI spec. Using cached version: #{version}. " <>
+              "Please ensure network connectivity for the latest API spec."
+            )
+            {:ok, spec}
+
+          :error ->
+            {:error, "No OpenAPI spec available (network error and no cached version)"}
         end
-
-      {:ok, spec}
-    else
-      {:error, reason} ->
-        {:error, "Failed to load OpenAPI spec: #{inspect(reason)}"}
-
-      error ->
-        {:error, "Unexpected error loading OpenAPI spec: #{inspect(error)}"}
     end
   end
 
@@ -29,6 +39,66 @@ defmodule Stancer.OpenAPILoader do
     case load_spec() do
       {:ok, spec} -> spec
       {:error, reason} -> raise reason
+    end
+  end
+
+  defp download_spec do
+    with :ok <- Application.ensure_started(:req),
+         {:ok, response} <- Req.get(@openapi_url) do
+      spec =
+        case response.body do
+          body when is_map(body) -> body
+          body when is_binary(body) -> Jason.decode!(body)
+          _ -> nil
+        end
+
+      if spec do
+        # Cache it for future use
+        cache_spec(spec)
+        {:ok, spec}
+      else
+        :error
+      end
+    else
+      _ -> :error
+    end
+  end
+
+  defp load_cached_spec do
+    priv_path = Application.app_dir(:stancer, "priv/openapi.json")
+
+    case File.read(priv_path) do
+      {:ok, content} ->
+        case Jason.decode(content) do
+          {:ok, spec} -> {:ok, spec}
+          _ -> :error
+        end
+
+      _ ->
+        :error
+    end
+  end
+
+  defp cache_spec(spec) do
+    priv_path = Application.app_dir(:stancer, "priv/openapi.json")
+    File.write!(priv_path, Jason.encode!(spec, pretty: true))
+  end
+
+  defp get_version_info(spec) do
+    info = Map.get(spec, "info", %{})
+    version = Map.get(info, "version", "unknown")
+
+    # Try to get timestamp if available
+    timestamp =
+      Map.get(info, "x-updated-at") ||
+      Map.get(info, "x-timestamp") ||
+      Map.get(info, "x-date") ||
+      ""
+
+    if timestamp != "" do
+      "v#{version} (#{timestamp})"
+    else
+      "v#{version}"
     end
   end
 
