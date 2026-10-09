@@ -88,33 +88,44 @@ Stancer.delete_card(card_token)
 - ✅ Client Stancer basique avec endpoints clés
 - ✅ Configuration via config Elixir
 
-### Phase 2 ✅ (Refactored)
-- ✅ Clean, hierarchical API structure (`Stancer.API.ResourceName`)
-- ✅ Standard CRUD functions per resource (list, create, get, update, delete)
-- ✅ Full documentation with examples
-- ✅ Type-safe @spec declarations
-- ✅ Consistent error handling
-- ✅ OpenAPI loader and generator modules (foundation for future generation)
+### Phase 2 ✅ (Refactored - Compile-time Metaprogramming)
+- ✅ **True compile-time metaprogramming** with `for` + `unquote` loops
+- ✅ **51 API functions** automatically generated from OpenAPI spec
+- ✅ Intelligent fallback: try remote spec, use `priv/openapi.json` if offline
+- ✅ Version logging: warns with spec version/date when using cached version
+- ✅ All functions follow `resource_action` pattern
+- ✅ Type-safe with guard clauses
+- ✅ Standard error handling `{:ok, _} | {:error, _}`
 - ✅ Full test coverage
 
-**Structure:**
+**Generated Functions Pattern:**
 ```
-Stancer.API.Customers.list()       # GET /customers
-Stancer.API.Customers.create(data) # POST /customers
-Stancer.API.Customers.get(id)      # GET /customers/{id}
-Stancer.API.Customers.update(id, data) # PUT /customers/{id}
-Stancer.API.Customers.delete(id)   # DELETE /customers/{id}
+Stancer.API.customers_list()               # GET /customers
+Stancer.API.customers_create(data)         # POST /customers
+Stancer.API.customers_get(id)              # GET /customers/{id}
+Stancer.API.customers_update(id, data)     # PUT /customers/{id}
+Stancer.API.customers_delete(id)           # DELETE /customers/{id}
 
-Stancer.API.Payments.* (same pattern)
-Stancer.API.Cards.* (same pattern)
+Stancer.API.payments_list()
+Stancer.API.payments_create(data)
+Stancer.API.payments_get(id)
+Stancer.API.payment_intents_list()
+Stancer.API.payment_intents_create(data)
+... (51 total functions)
 ```
+
+**How It Works:**
+1. `Stancer.OpenAPILoader` tries to download spec from `https://docs.stancer.com/api/openapi.json`
+2. If successful: saves to `priv/openapi.json` and logs version info
+3. If fails: loads cached version from `priv/openapi.json` and logs warning
+4. Parse spec to extract 51 operations/endpoints
+5. `for operation <- @operations do` loop with `unquote` generates all functions at compile time
 
 ### Phase 3 (TODO)
-- Auto-generate remaining resource modules from OpenAPI spec
-- Support for additional resource types (Mandates, Subscriptions, Disputes, Webhooks, etc.)
 - Validation layer based on OpenAPI schemas
-- Specialized functions for complex operations (capture, refund, etc.)
+- Specialized function signatures for complex operations
 - Webhook handler generation
+- Auto-update Mix task to refresh `priv/openapi.json`
 
 ---
 
